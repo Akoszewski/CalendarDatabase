@@ -1,10 +1,12 @@
-drop table if exists records;
+drop table if exists Records;
 
-create table records(
+create table Records(
     id INT primary key,
     date DATE not null,
     title TEXT(128) not null,
-    desc TEXT(1024) not null
+    description TEXT(1024) not null
 );
 
-select * from records;
+INSERT INTO Records (date, title, description) VALUES ('1998-12-12', 'Przykladowy tytul zadania', 'Przykladowy opis');
+
+select * from Records;

@@ -6,17 +6,26 @@
 class Record
 {
 public:
-    Record(std::string title, std::string date, std::string description, int id = -1)
-      : title(std::move(title)), date(std::move(date)), description(std::move(description)), id(id)
+    Record(std::string date, std::string title, std::string description, int id = -1)
+      : date(std::move(date)), title(std::move(title)), description(std::move(description)), id(id)
     {}
     void print() const
     {
         std::cout << "Data: " << date << " Zadanie: " << title  << " Opis: " << description << std::endl;
     }
+    std::string getDate() const {
+        return date;
+    }
+    std::string getTitle() const {
+        return title;
+    }
+    std::string getDescription() const {
+        return description;
+    }
 private:
     int id;
-    std::string title;
     std::string date;
+    std::string title;
     std::string description;
 };
 
@@ -30,16 +39,17 @@ struct sqlite3_deleter
 class DbManager
 {
 public:
-    DbManager(std::string path);
-    std::list<Record> getRecords() const;
-    void insert(Record record);
+    DbManager(const std::string& path);
+    std::list<Record> getRecords();
+    void insert(const Record& record);
 private:
     std::string path;
     std::unique_ptr<sqlite3, sqlite3_deleter> db;
+    std::list<Record> executeQuery(const std::string& query);
 };
 
-DbManager::DbManager(std::string path)
-  : path(std::move(path))
+DbManager::DbManager(const std::string& path)
+  : path(path)
 {
     sqlite3* ptr = nullptr;
     int ret = sqlite3_open(path.c_str(), &ptr);
@@ -51,19 +61,40 @@ DbManager::DbManager(std::string path)
     }
 }
 
-std::list<Record> DbManager::getRecords() const
+std::list<Record> DbManager::getRecords()
 {
-    // auto patients = db.executeQuery<Patient>("select * from patients", {sizeof(Patient::id), 20, 20, 12});
-    std::list<Record> records;
-    records.emplace_back("Domyslny record", "2000-11-11", "Blabla");
+    std::list<Record> records = executeQuery("select * from Records");
     return records;
 }
 
-void DbManager::insert(Record record)
+void DbManager::insert(const Record& record)
 {
-    // std::string komenda = "INSERT INTO Patients (name, surname, pesel) VALUES ('"+patient.name+ "','" +patient.surname+"','"+patient.pesel+"');";
-    // db.executeQuery<>(komenda);
+    std::string query = "INSERT INTO Records (date, title, description) VALUES ('"
+        + record.getDate() + "','" + record.getTitle() + "','" + record.getDescription() + "');";
+    executeQuery(query);
 }
+
+int queryCallback(void* data, int argc, char **argv, char **azColName)
+{
+   std::list<Record>* dataVect = static_cast<std::list<Record>*>(data);
+   dataVect->emplace_back(argv[1], argv[2], argv[3]);
+   return 0;
+}
+
+std::list<Record> DbManager::executeQuery(const std::string& query)
+{
+    char* zErrMsg = nullptr;
+    std::list<Record> results;
+    int res = sqlite3_exec(db.get(), query.c_str(), queryCallback, &results, &zErrMsg);
+    if (res != SQLITE_OK) {
+        std::cout << "SQL error: " << zErrMsg << std::endl;
+        sqlite3_free(zErrMsg);
+    } else {
+      std::cout << "Udalo sie wykonac komende" << std::endl;
+    }
+    return results;
+}
+
 
 Record createRecordFromUser()
 {
