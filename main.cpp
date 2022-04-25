@@ -1,5 +1,7 @@
 #include <iostream>
 #include <list>
+#include <sqlite3.h>
+#include <memory>
 
 class Record
 {
@@ -18,6 +20,13 @@ private:
     std::string description;
 };
 
+struct sqlite3_deleter
+{
+    void operator()(sqlite3* sql) {
+        sqlite3_close_v2(sql);
+    }
+};
+
 class DbManager
 {
 public:
@@ -26,11 +35,21 @@ public:
     void insert(Record record);
 private:
     std::string path;
+    std::unique_ptr<sqlite3, sqlite3_deleter> db;
 };
 
 DbManager::DbManager(std::string path)
   : path(std::move(path))
-{}
+{
+    sqlite3* ptr = nullptr;
+    int ret = sqlite3_open(path.c_str(), &ptr);
+    db = std::unique_ptr<sqlite3, sqlite3_deleter>(ptr);
+    if (ret)
+    {
+        std::cout << "Nie udalo sie otworzyc bazy danych" << sqlite3_errmsg(db.get()) << std::endl;
+        exit(0);
+    }
+}
 
 std::list<Record> DbManager::getRecords() const
 {
@@ -60,7 +79,7 @@ Record createRecordFromUser()
 
 int main()
 {
-    DbManager db("Lab1 db");
+    DbManager db("database.db");
 
     while (true) {
         char option;
