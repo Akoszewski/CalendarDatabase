@@ -9,9 +9,11 @@ public:
     Record(std::string date, std::string title, std::string description, int id = -1)
       : date(std::move(date)), title(std::move(title)), description(std::move(description)), id(id)
     {}
-    void print() const
+    void print(bool shouldShowId = true) const
     {
-        std::cout << "Data: " << date << " Zadanie: " << title  << " Opis: " << description << std::endl;
+        if (shouldShowId) { std::cout << "ID: " << id << " "; }
+        std::cout << "Data: " << date << " Zadanie: "
+            << title  << " Opis: " << description << std::endl;
     }
     std::string getDate() const {
         return date;
@@ -77,7 +79,7 @@ void DbManager::insert(const Record& record)
 int queryCallback(void* data, int argc, char **argv, char **azColName)
 {
    std::list<Record>* dataVect = static_cast<std::list<Record>*>(data);
-   dataVect->emplace_back(argv[1], argv[2], argv[3]);
+   dataVect->emplace_back(argv[1], argv[2], argv[3], atoi(argv[0]));
    return 0;
 }
 
@@ -89,14 +91,12 @@ std::list<Record> DbManager::executeQuery(const std::string& query)
     if (res != SQLITE_OK) {
         std::cout << "SQL error: " << zErrMsg << std::endl;
         sqlite3_free(zErrMsg);
-    } else {
-      std::cout << "Udalo sie wykonac komende" << std::endl;
     }
     return results;
 }
 
 
-Record createRecordFromUser()
+Record createRecordFromInput()
 {
     std::string date, title, desc;
     std::cout << "Podaj date: ";
@@ -118,10 +118,10 @@ int main()
                 << "1 - Insert\n2 - Select\n3 - Wyjscie" << std::endl;
         std::cin >> option;
         if (option == '1') {
-            Record record = createRecordFromUser();
+            Record record = createRecordFromInput();
             db.insert(record);
             std::cout << "Dodano rekord: " << std::endl;
-            record.print();
+            record.print(false);
         }
         else if (option == '2') {
             std::list<Record> records = db.getRecords();
