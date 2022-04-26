@@ -41,18 +41,25 @@ struct sqlite3_deleter
 class DbManager
 {
 public:
-    DbManager(const std::string& path);
+    static DbManager& Get() { return instance; }
+    DbManager(const DbManager&) = delete;
+    void init(const std::string& path);
     std::list<Record> getRecords();
     void insert(const Record& record);
 private:
     std::string path;
     std::unique_ptr<sqlite3, sqlite3_deleter> db;
     std::list<Record> executeQuery(const std::string& query);
+
+    DbManager() {}
+    static DbManager instance;
 };
 
-DbManager::DbManager(const std::string& path)
-  : path(path)
+DbManager DbManager::instance;
+
+void DbManager::init(const std::string& path)
 {
+    this->path = path;
     sqlite3* ptr = nullptr;
     int ret = sqlite3_open(path.c_str(), &ptr);
     db = std::unique_ptr<sqlite3, sqlite3_deleter>(ptr);
@@ -110,7 +117,8 @@ Record createRecordFromInput()
 
 int main()
 {
-    DbManager db("database.db");
+    DbManager& db = DbManager::Get();
+    db.init("database.db");
 
     while (true) {
         char option;
